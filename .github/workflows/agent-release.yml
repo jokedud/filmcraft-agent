@@ -30,7 +30,7 @@ jobs:
           - { os: ubuntu-24.04-arm,  asset: linux-aarch64,  ext: tar.gz }
           - { os: windows-latest,    asset: windows-x64,    ext: zip }
           - { os: windows-11-arm,    asset: windows-arm64,  ext: zip }
-          - { os: macos-13,          asset: macos-x86_64,   ext: tar.gz }
+          - { os: macos-15-intel,    asset: macos-x86_64,   ext: tar.gz }
           - { os: macos-14,          asset: macos-aarch64,  ext: tar.gz }
     runs-on: ${{ matrix.os }}
     steps:
@@ -43,7 +43,7 @@ jobs:
           shared-key: filmcraft-cli-${{ matrix.asset }}
 
       - name: Build filmcraft-cli
-        run: cargo build --release -p filmcraft-cli --locked
+        run: cargo build --release -p filmcraft-cli
 
       - name: Stage package (unix)
         if: runner.os != 'Windows'
@@ -54,7 +54,7 @@ jobs:
           cp target/release/filmcraft-cli "$P/"
           cp agent/fcedit.py "$P/fcedit" && chmod +x "$P/fcedit"
           cp agent/SKILL.md agent/mcp.json "$P/" 2>/dev/null || true
-          mkdir -p "$P/examples" && cp agent/examples/* "$P/examples/" || true
+          mkdir -p "$P/examples"; cp agent/examples/* "$P/examples/" 2>/dev/null || true
           cp LICENSE-MIT LICENSE-APACHE NOTICE "$P/" 2>/dev/null || true
           tar czf "filmcraft-cli-${VERSION}-${{ matrix.asset }}.${{ matrix.ext }}" -C pkg "filmcraft-cli-${VERSION}-${{ matrix.asset }}"
           sha256sum "filmcraft-cli-${VERSION}-${{ matrix.asset }}.${{ matrix.ext }}" > "filmcraft-cli-${VERSION}-${{ matrix.asset }}.${{ matrix.ext }}.sha256"
