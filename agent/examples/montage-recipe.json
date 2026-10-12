@@ -1,0 +1,18 @@
+{
+  "sequence": {"name": "montage", "width": 1920, "height": 1080, "fps": 30},
+  "media": {
+    "a": "/abs/path/clip-a.mp4",
+    "b": "/abs/path/clip-b.mp4",
+    "song": "/abs/path/music.mp3"
+  },
+  "timeline": [
+    {"op": "place", "src": "a", "in": 1.5, "dur": 5, "name": "open"},
+    {"op": "place", "src": "b", "in": 0, "dur": 5, "name": "close"},
+    {"op": "audio", "src": "song", "at": 0, "track": "A2", "dur": 10},
+    {"op": "transition", "clip": "open", "effect": "cross_dissolve", "frames": 15, "edge": "out"},
+    {"op": "gain", "clip": "open.audio", "db": -6},
+    {"op": "text", "content": "MONTAGE", "at": 0.5, "dur": 3, "position": [960, 540], "size": 140},
+    {"op": "speed", "clip": "#1", "speed": 150}
+  ],
+  "export": {"path": "montage.mp4", "format": "h264", "crf": 20}
+}

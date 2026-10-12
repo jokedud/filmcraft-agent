@@ -1,0 +1,8 @@
+# Raw engine-command script (run: filmcraft-cli run commands.jsonl --save-as project.fcproj)
+# One {"id","params"} per line; results stream back as JSON.
+{"id":"file.newSequence","params":{"name":"scripted","width":1920,"height":1080,"fps":30}}
+{"id":"file.import","params":{"paths":["/abs/path/clip.mp4"]}}
+{"id":"timeline.place","params":{"item":8,"track":"V1","audioTrack":"A1","time":0,"video":true,"audio":true}}
+{"id":"sequence.applyVideoTransition","params":{"clip":11,"effect":"cross_dissolve","frames":24,"edge":"out"}}
+{"id":"graphics.newText","params":{"text":"TITLE","position":[960,540],"size":120,"seconds":4,"time":0}}
+{"id":"file.exportMedia","params":{"path":"out.mp4","format":"h264","wait":true}}

@@ -1,0 +1,14 @@
+{
+  "sequence": {"name": "captioned", "width": 1080, "height": 1920, "fps": 30},
+  "media": {"talk": "/abs/path/talking.mp4"},
+  "captions": {
+    "format": "Subtitle",
+    "style": {"size": 64, "anchor": "bottom", "margin": 0.12, "background": true, "color": "#ffffffff"}
+  },
+  "timeline": [
+    {"op": "place", "src": "talk", "in": 0, "dur": 30, "name": "talk"},
+    {"op": "importCaptions", "path": "/abs/path/subs.srt"},
+    {"op": "text", "content": "@myhandle", "at": 0.2, "dur": 4, "position": [540, 300], "size": 72}
+  ],
+  "export": {"path": "captioned.mp4", "format": "h264", "burnCaptions": true, "captionSidecar": "srt"}
+}

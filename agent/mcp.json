@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "filmcraft": {
+      "command": "filmcraft-cli",
+      "args": ["mcp"]
+    },
+    "filmcraft-demo": {
+      "command": "filmcraft-cli",
+      "args": ["mcp", "--demo"]
+    },
+    "filmcraft-bridge": {
+      "command": "filmcraft-cli",
+      "args": ["mcp", "--bridge", "127.0.0.1:9876"],
+      "comment": "drives the running desktop app started with: filmcraft --control 9876"
+    }
+  }
+}

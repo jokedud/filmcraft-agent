@@ -14,6 +14,39 @@
   <b>Video editing, color and sound; an open-source, clean-room reimplementation of Adobe Premiere Pro, rebuilt in pure Rust.</b>
 </p>
 
+<h2 align="center">🤖 FilmCraft for Agents</h2>
+
+<p align="center">
+  <b>This fork wraps the headless engine so AI agents can edit video on Linux, Windows and macOS —
+  one JSON recipe in, a rendered file out.</b>
+</p>
+
+```sh
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/jokedud/filmcraft-agent/main/agent/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/jokedud/filmcraft-agent/main/agent/install.ps1 | iex"
+```
+
+```sh
+fcedit build recipe.json        # declarative recipe -> exported video
+fcedit serve --port 8321        # persistent session over HTTP (POST /recipe, /run, /frame)
+filmcraft-cli mcp               # MCP server on stdio for Claude Code / Devin / any MCP client
+```
+
+- 📦 **Per-OS binaries** on [Releases](https://github.com/jokedud/filmcraft-agent/releases): `filmcraft-cli` for linux-x86_64/aarch64, macos x86_64/arm64, windows-x64/arm64 — built by `agent-release.yml`.
+- 🧾 **Recipe format + SKILL.md** in [`agent/`](agent/) — give [`agent/SKILL.md`](agent/SKILL.md) to an agent and it knows the whole workflow.
+- 🌐 **Docs site**: https://jokedud.github.io/filmcraft-agent/
+- 🐳 **Docker**: `docker build -f agent/Dockerfile -t fcedit .` → `POST :8321/recipe`.
+
+Everything below is the upstream FilmCraft project. See [`docs/agents.md`](docs/agents.md)
+for the engine's own agent documentation (MCP tools, control channel, JSONL scripts).
+
+---
+
+<br>
+
 <p align="center">
   An open-source, clean-room take on the Adobe Premiere Pro workflow: native on macOS, Windows and Linux, and in the browser via WebAssembly.<br>
   By the ArtCraft team.

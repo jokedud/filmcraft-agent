@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FilmCraft for Agents — video editing AI agents can actually use</title>
+<meta name="description" content="A real non-linear video editor driven entirely by JSON. One install for Linux, Windows, macOS — recipes, MCP, or HTTP.">
+<style>
+  :root {
+    --bg: #0d0f12; --panel: #15181d; --panel2: #1a1e24; --line: #262b33;
+    --text: #e8ecf1; --dim: #9aa4b0; --accent: #ff5f3d; --accent2: #4dc3ff;
+    --code: #0a0c0f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font: 16px/1.6 -apple-system, "Segoe UI", Inter, Roboto, sans-serif; }
+  code, pre { font: 13px/1.55 ui-monospace, "Cascadia Code", "JetBrains Mono", Consolas, monospace; }
+  a { color: var(--accent2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+  header.hero { padding: 84px 0 56px; border-bottom: 1px solid var(--line); }
+  .tag { display: inline-block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 4px 12px; margin-bottom: 20px; }
+  h1 { font-size: clamp(30px, 5vw, 52px); line-height: 1.1; letter-spacing: -0.02em; }
+  h1 em { color: var(--accent); font-style: normal; }
+  .sub { color: var(--dim); font-size: 18px; max-width: 640px; margin-top: 18px; }
+  .cta { margin-top: 28px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .btn { display: inline-block; padding: 12px 22px; border-radius: 8px; font-weight: 600; font-size: 15px; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #14100e; }
+  .btn:hover { text-decoration: none; filter: brightness(1.1); }
+  section { padding: 56px 0; border-bottom: 1px solid var(--line); }
+  h2 { font-size: 26px; letter-spacing: -0.01em; margin-bottom: 18px; }
+  h2 .n { color: var(--accent); margin-right: 10px; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 17px; margin: 26px 0 10px; }
+  p.dim, li { color: var(--dim); }
+  ul { padding-left: 22px; margin: 8px 0; }
+  li b, p b { color: var(--text); }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 20px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+  .card h3 { margin-top: 0; }
+  pre { background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; overflow-x: auto; margin: 14px 0; }
+  pre code { color: #cfe3f3; }
+  pre .c { color: #66727e; }
+  pre .k { color: var(--accent2); }
+  .tabs { display: flex; gap: 8px; margin: 14px 0 0; }
+  .tabs button { background: var(--panel); color: var(--dim); border: 1px solid var(--line); border-radius: 8px 8px 0 0; padding: 8px 16px; font: inherit; font-size: 13px; cursor: pointer; }
+  .tabs button.active { color: var(--text); border-bottom-color: var(--code); background: var(--code); }
+  .tabbody pre { border-top-left-radius: 0; margin-top: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  td code { color: var(--accent2); }
+  footer { padding: 40px 0 60px; color: var(--dim); font-size: 14px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<header class="hero"><div class="wrap">
+  <span class="tag">FilmCraft for Agents</span>
+  <h1>A real video editor that <em>AI agents</em> can actually drive.</h1>
+  <p class="sub">FilmCraft is a clean-room, Premiere-class non-linear editor written in pure Rust.
+     This distribution wraps its headless engine so an agent on <b>Linux, Windows, or macOS</b> can
+     cut, caption, transition and export video — one JSON file in, an mp4 out.</p>
+  <div class="cta">
+    <a class="btn primary" href="#install">Install in one line</a>
+    <a class="btn" href="https://github.com/jokedud/filmcraft-agent">GitHub repo</a>
+    <a class="btn" href="#recipe">See a recipe</a>
+  </div>
+</div></header>
+
+<section id="install"><div class="wrap">
+  <h2><span class="n">01</span>Install</h2>
+  <p class="dim">One command puts <code>filmcraft-cli</code> (the engine) and <code>fcedit</code>
+  (the agent tool) on PATH. No ffmpeg, no GPU, no window needed.</p>
+  <div class="tabs">
+    <button class="active" data-t="linux">Linux / macOS</button>
+    <button data-t="win">Windows</button>
+    <button data-t="docker">Docker</button>
+    <button data-t="src">From source</button>
+  </div>
+  <div class="tabbody">
+    <pre id="t-linux"><code>curl -fsSL https://raw.githubusercontent.com/jokedud/filmcraft-agent/main/agent/install.sh | sh</code></pre>
+    <pre id="t-win" class="hidden"><code>powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/jokedud/filmcraft-agent/main/agent/install.ps1 | iex"</code></pre>
+    <pre id="t-docker" class="hidden"><code>docker build -f agent/Dockerfile -t fcedit .
+docker run -p 8321:8321 -v $PWD/media:/media fcedit
+<span class="c"># POST recipes to http://localhost:8321/recipe</span></code></pre>
+    <pre id="t-src" class="hidden"><code>git clone https://github.com/jokedud/filmcraft-agent && cd filmcraft-agent
+cargo build --release -p filmcraft-cli
+<span class="c"># binary at target/release/filmcraft-cli; agent tool is agent/fcedit.py</span></code></pre>
+  </div>
+  <div class="grid">
+    <div class="card"><h3>fcedit build</h3><p class="dim">Declarative recipe → exported video. Named clips, auto-append timeline, transitions, effects, captions, keyframes.</p></div>
+    <div class="card"><h3>fcedit serve</h3><p class="dim">A persistent editing session over HTTP — <code>POST /recipe</code>, <code>/run</code>, <code>/batch</code>, <code>/frame</code>, <code>GET /inspect</code>.</p></div>
+    <div class="card"><h3>filmcraft-cli mcp</h3><p class="dim">A full MCP server on stdio. Plug it into Claude Code, Devin, or any MCP client and the tools appear.</p></div>
+  </div>
+</div></section>
+
+<section id="recipe"><div class="wrap">
+  <h2><span class="n">02</span>The recipe format</h2>
+  <p class="dim">One JSON document describes media, timeline, styling and export. <code>fcedit build</code>
+  compiles it to engine commands against a live session — clip ids resolve by name.</p>
+  <pre><code>{
+  <span class="k">"sequence"</span>: {"width": 1920, "height": 1080, "fps": 30},
+  <span class="k">"media"</span>: {"a": "/abs/intro.mp4", "song": "/abs/music.mp3"},
+  <span class="k">"captions"</span>: {"format": "Subtitle", "style": {"size": 42, "anchor": "bottom"}},
+  <span class="k">"timeline"</span>: [
+    {"op": "place", "src": "a", "in": 2, "out": 8, "name": "intro"},
+    {"op": "place", "src": "a", "in": 12, "dur": 4},          <span class="c">// auto-appends</span>
+    {"op": "audio", "src": "song", "at": 0, "track": "A2", "dur": 10},
+    {"op": "transition", "clip": "intro", "effect": "cross_dissolve", "frames": 24, "edge": "out"},
+    {"op": "text", "content": "MADE BY AN AGENT", "at": 0.5, "dur": 4, "position": [960, 540], "size": 120},
+    {"op": "effect", "clip": "#1", "effect": "gaussian_blur", "params": {"blurriness": 30}},
+    {"op": "speed", "clip": "intro", "speed": 200},
+    {"op": "gain", "clip": "intro.audio", "db": -6},
+    {"op": "caption", "text": "hello world", "at": 1, "dur": 2},
+    {"op": "marker", "at": 4, "name": "beat drop"}
+  ],
+  <span class="k">"export"</span>: {"path": "out.mp4", "format": "h264", "crf": 20, "burnCaptions": true}
+}</code></pre>
+  <pre><code>fcedit build recipe.json --verbose
+<span class="c"># → out.mp4 (h264 1080p, captions burned in)</span></code></pre>
+</div></section>
+
+<section id="ops"><div class="wrap">
+  <h2><span class="n">03</span>Recipe ops</h2>
+  <table>
+    <tr><th>op</th><th>what it does</th><th>engine command</th></tr>
+    <tr><td><code>place</code></td><td>put media on the timeline (<code>in</code>/<code>out</code>/<code>dur</code>, <code>at</code> or auto-append, <code>track</code>, <code>audioTrack</code>, <code>name</code>)</td><td>timeline.place</td></tr>
+    <tr><td><code>audio</code></td><td>audio-only placement (music beds, VO)</td><td>timeline.place</td></tr>
+    <tr><td><code>image</code></td><td>still image with a duration</td><td>timeline.place</td></tr>
+    <tr><td><code>matte</code> / <code>bars</code></td><td>generated color matte / bars &amp; tone</td><td>file.newColorMatte …</td></tr>
+    <tr><td><code>text</code></td><td>title graphic (position, size, font, props)</td><td>graphics.newText / graphics.set</td></tr>
+    <tr><td><code>shape</code></td><td>rectangle / ellipse / polygon overlay</td><td>graphics.newRectangle …</td></tr>
+    <tr><td><code>transition</code></td><td>dissolves, wipes, dips; <code>"clip": "name.audio"</code> for audio transitions</td><td>sequence.applyVideo/AudioTransition</td></tr>
+    <tr><td><code>effect</code></td><td>apply an effect + params (blur, Lumetri-style color…)</td><td>effects.apply / effects.setParam</td></tr>
+    <tr><td><code>param</code></td><td>set any effect/motion param, with keyframes</td><td>effects.setParam</td></tr>
+    <tr><td><code>speed</code></td><td>speed/duration, reverse, optical flow</td><td>clip.speedDuration</td></tr>
+    <tr><td><code>gain</code></td><td>clip audio gain (set/adjust/normalize)</td><td>clip.audioGain</td></tr>
+    <tr><td><code>trim</code> / <code>move</code> / <code>razor</code></td><td>frame-accurate edits</td><td>timeline.trim / move / razor</td></tr>
+    <tr><td><code>caption</code> / <code>importCaptions</code></td><td>subtitle cues or an .srt/.vtt file; burn in or sidecar on export</td><td>captions.add / captions.import</td></tr>
+    <tr><td><code>marker</code></td><td>named timeline marker</td><td>markers.add</td></tr>
+    <tr><td><code>preview</code></td><td>PNG of the program frame at a time — agent "eyes"</td><td>file.exportFrame</td></tr>
+    <tr><td><code>transcribe</code></td><td>speech → text (when a speech model is present)</td><td>sequence.transcribe</td></tr>
+    <tr><td><code>raw</code></td><td>escape hatch: any of the 700+ engine commands</td><td>any</td></tr>
+  </table>
+</div></section>
+
+<section id="agent"><div class="wrap">
+  <h2><span class="n">04</span>Wire it to your agent</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>MCP (Claude Code, Devin…)</h3>
+      <pre><code>{"mcpServers": {"filmcraft":
+  {"command": "filmcraft-cli", "args": ["mcp"]}}}</code></pre>
+      <p class="dim">Tools: <code>command_run</code>, <code>command_batch</code>, <code>command_list</code>, <code>doc_inspect</code>, <code>media_import</code>, <code>render_frame</code>, plus UI-driving tools in bridge mode.</p>
+    </div>
+    <div class="card">
+      <h3>HTTP (any device, any language)</h3>
+      <pre><code>fcedit serve --port 8321
+
+curl -X POST localhost:8321/recipe \
+  -H 'Content-Type: application/json' -d @recipe.json</code></pre>
+      <p class="dim">Also <code>POST /run</code>, <code>/batch</code>, <code>/frame</code> (PNG), <code>GET /inspect</code>, <code>/commands</code>. Or ship the whole thing as the Docker image.</p>
+    </div>
+    <div class="card">
+      <h3>Skill file</h3>
+      <p class="dim">Drop <a href="https://github.com/jokedud/filmcraft-agent/blob/main/agent/SKILL.md">agent/SKILL.md</a> into your agent's skills — it documents install, the recipe schema, clip refs, and the command cookbook.</p>
+    </div>
+    <div class="card">
+      <h3>Raw JSONL / CLI</h3>
+      <pre><code>filmcraft-cli exec timeline.place '{"item":8,"track":"V1","time":0}'
+filmcraft-cli run script.jsonl --save-as edit.fcproj
+filmcraft-cli export out.mp4 --project edit.fcproj --format h264</code></pre>
+      <p class="dim">Every command is a shell call; projects persist as <code>.fcproj</code> files.</p>
+    </div>
+  </div>
+</div></section>
+
+<section id="about"><div class="wrap">
+  <h2><span class="n">05</span>What you get</h2>
+  <ul>
+    <li><b>The whole engine, headless.</b> 700+ commands: multi-track timeline, linked A/V clips, ripple/roll/slip/slide trims, transitions, effects, keyframes, captions (608/708/Subtitle/Teletext), markers, nested sequences, interchange (EDL/OTIO/FCP-XML/AAF).</li>
+    <li><b>Real media in, real media out.</b> h264/HEVC/ProRes/DNxHR/APV/MJPEG encode, MXF Op-1a/Op-Atom, image sequences, WAV/AIFF/AAC/FLAC audio. Decode for the formats you'd feed an editor.</li>
+    <li><b>No GPU, no ffmpeg.</b> Pure-Rust decoders and encoders; CPU compositor (GPU optional). It runs on a tiny VPS or a laptop.</li>
+    <li><b>Never crashes.</b> The upstream rule: malformed media, bad params, corrupt projects return actionable errors — never a panic, never lost work.</li>
+    <li><b>A desktop app too.</b> The same engine drives the FilmCraft GUI; agents can attach to a live editor over the control channel (<code>--bridge</code>) and click, drag, and screenshot it.</li>
+  </ul>
+</div></section>
+
+<footer><div class="wrap">
+  <p><b>FilmCraft for Agents</b> — distribution built on
+  <a href="https://github.com/storytold/filmcraft">storytold/filmcraft</a> (MIT / Apache-2.0).
+  Engine docs: <a href="https://github.com/jokedud/filmcraft-agent/blob/main/docs/agents.md">agents.md</a> ·
+  <a href="https://github.com/jokedud/filmcraft-agent/blob/main/docs/control-protocol.md">control-protocol.md</a> ·
+  <a href="https://github.com/jokedud/filmcraft-agent/tree/main/agent">agent/</a> directory ·
+  Sibling craft apps: <a href="https://github.com/storytold">storytold</a>.</p>
+</div></footer>
+
+<script>
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  document.querySelectorAll('.tabbody pre').forEach(p => p.classList.add('hidden'));
+  document.getElementById('t-' + b.dataset.t).classList.remove('hidden');
+}));
+</script>
+</body>
+</html>
