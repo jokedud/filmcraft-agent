@@ -68,8 +68,11 @@ jobs:
             chmod +x "${folder}/fcedit"
             cp agent/SKILL.md agent/mcp.json "${folder}/"
             cp agent/examples/*.json "${folder}/examples/"
+            # shellcheck disable=SC2016 # Keep launcher variables for expansion at execution time.
             printf '#!/bin/sh\nexec "$(dirname "$0")/fcedit" --app effect "$@"\n' > "${folder}/ecedit"
+            # shellcheck disable=SC2016 # Keep launcher variables for expansion at execution time.
             printf '#!/bin/sh\nexec "$(dirname "$0")/fcedit" --app sound "$@"\n' > "${folder}/scedit"
+            # shellcheck disable=SC2016 # Keep launcher variables for expansion at execution time.
             printf '#!/bin/sh\nexec "$(dirname "$0")/fcedit" serve "$@"\n' > "${folder}/fcserve"
             chmod +x "${folder}/ecedit" "${folder}/scedit" "${folder}/fcserve"
             archive="${package}.${{ matrix.ext }}"
@@ -111,7 +114,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export FILMCRAFT_CLI="$(pwd)/target/release/filmcraft-cli"
+          FILMCRAFT_CLI="$(pwd)/target/release/filmcraft-cli"
+          export FILMCRAFT_CLI
           cat > ci-film.json <<'EOF'
           {"sequence":{"name":"ci","width":320,"height":180,"fps":30},
            "timeline":[{"op":"bars","at":0,"dur":1},{"op":"text","content":"CI","at":0.2,"dur":0.5,"position":[160,90],"size":40}],
