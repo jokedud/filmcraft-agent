@@ -1,0 +1,40 @@
+{
+  "app": "sound",
+  "session": {
+    "name": "Agent Mix",
+    "sample_rate": 48000,
+    "template": "blank"
+  },
+  "tracks": [
+    {
+      "name": "music",
+      "src": "/ABSOLUTE/PATH/TO/music.wav",
+      "at": 0,
+      "gain": -6,
+      "pan": 0,
+      "mute": false,
+      "solo": false,
+      "inserts": [
+        {"plugin": "eq_7band", "params": {}}
+      ],
+      "automation": {
+        "volume": [
+          {"time": 0, "value": -12},
+          {"time": 4, "value": 0}
+        ]
+      }
+    }
+  ],
+  "markers": [
+    {"at": 4, "name": "drop"}
+  ],
+  "save": "/ABSOLUTE/PATH/TO/mix.scraft",
+  "bounce": {
+    "path": "/ABSOLUTE/PATH/TO/mix.wav",
+    "format": "wav",
+    "bit_depth": "24",
+    "normalize": true,
+    "start": 0,
+    "end": 10
+  }
+}

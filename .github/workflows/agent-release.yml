@@ -1,16 +1,12 @@
 name: Agent Release
 
-# Builds standalone filmcraft-cli binaries + the fcedit agent tool for every
-# supported OS/arch and attaches them to a GitHub release. Tag with agent-v*
-# to publish:   git tag agent-v0.1.0 && git push origin agent-v0.1.0
-
 on:
   push:
     tags: ["agent-v*"]
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (e.g. 0.1.0); used for asset names"
+        description: "Release version (e.g. agent-v0.2.0)"
         required: true
 
 permissions:
@@ -18,6 +14,7 @@ permissions:
 
 env:
   VERSION: ${{ github.event.inputs.version || github.ref_name }}
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target
 
 jobs:
   build:
@@ -26,103 +23,158 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-24.04,      asset: linux-x86_64,   ext: tar.gz }
-          - { os: ubuntu-24.04-arm,  asset: linux-aarch64,  ext: tar.gz }
-          - { os: windows-latest,    asset: windows-x64,    ext: zip }
-          - { os: windows-11-arm,    asset: windows-arm64,  ext: zip }
-          - { os: macos-15-intel,    asset: macos-x86_64,   ext: tar.gz }
-          - { os: macos-14,          asset: macos-aarch64,  ext: tar.gz }
+          - { os: ubuntu-24.04, asset: linux-x86_64, ext: tar.gz }
+          - { os: ubuntu-24.04-arm, asset: linux-aarch64, ext: tar.gz }
+          - { os: windows-latest, asset: windows-x64, ext: zip }
+          - { os: windows-11-arm, asset: windows-arm64, ext: zip }
+          - { os: macos-15-intel, asset: macos-x86_64, ext: tar.gz }
+          - { os: macos-14, asset: macos-aarch64, ext: tar.gz }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+        with:
+          repository: storytold/effectcraft
+          ref: v0.9.2
+          path: effectcraft
+      - uses: actions/checkout@v4
+        with:
+          repository: storytold/soundcraft
+          ref: v0.6.1
+          path: soundcraft
       - uses: dtolnay/rust-toolchain@stable
-
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: filmcraft-cli-${{ matrix.asset }}
+          shared-key: multi-craft-${{ matrix.asset }}
 
-      - name: Build filmcraft-cli
-        run: cargo build --release -p filmcraft-cli
-
-      - name: Stage package (unix)
-        if: runner.os != 'Windows'
+      - name: Build all three CLIs
         run: |
-          set -e
-          P="pkg/filmcraft-cli-${VERSION}-${{ matrix.asset }}"
-          mkdir -p "$P"
-          cp target/release/filmcraft-cli "$P/"
-          cp agent/fcedit.py "$P/fcedit" && chmod +x "$P/fcedit"
-          cp agent/SKILL.md agent/mcp.json "$P/" 2>/dev/null || true
-          mkdir -p "$P/examples"; cp agent/examples/* "$P/examples/" 2>/dev/null || true
-          cp LICENSE-MIT LICENSE-APACHE NOTICE "$P/" 2>/dev/null || true
-          tar czf "filmcraft-cli-${VERSION}-${{ matrix.asset }}.${{ matrix.ext }}" -C pkg "filmcraft-cli-${VERSION}-${{ matrix.asset }}"
-          sha256sum "filmcraft-cli-${VERSION}-${{ matrix.asset }}.${{ matrix.ext }}" > "filmcraft-cli-${VERSION}-${{ matrix.asset }}.${{ matrix.ext }}.sha256"
+          cargo build --release -p filmcraft-cli
+          cargo build --release -p effectcraft-cli --manifest-path effectcraft/Cargo.toml
+          cargo build --release -p soundcraft-cli --manifest-path soundcraft/Cargo.toml
 
-      - name: Stage package (windows)
+      - name: Package Unix archives and checksums
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for app in film effect sound; do
+            cli="${app}craft-cli"
+            package="${cli}-${VERSION}-${{ matrix.asset }}"
+            folder="pkg/${package}"
+            mkdir -p "${folder}/examples"
+            cp "target/release/${cli}" "${folder}/"
+            cp agent/fcedit.py "${folder}/fcedit"
+            chmod +x "${folder}/fcedit"
+            cp agent/SKILL.md agent/mcp.json "${folder}/"
+            cp agent/examples/*.json "${folder}/examples/"
+            printf '#!/bin/sh\nexec "$(dirname "$0")/fcedit" --app effect "$@"\n' > "${folder}/ecedit"
+            printf '#!/bin/sh\nexec "$(dirname "$0")/fcedit" --app sound "$@"\n' > "${folder}/scedit"
+            printf '#!/bin/sh\nexec "$(dirname "$0")/fcedit" serve "$@"\n' > "${folder}/fcserve"
+            chmod +x "${folder}/ecedit" "${folder}/scedit" "${folder}/fcserve"
+            archive="${package}.${{ matrix.ext }}"
+            tar czf "$archive" -C pkg "$package"
+            if command -v sha256sum >/dev/null 2>&1; then
+              sha256sum "$archive" > "${archive}.sha256"
+            else
+              shasum -a 256 "$archive" > "${archive}.sha256"
+            fi
+          done
+
+      - name: Package Windows archives and checksums
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $P = "pkg/filmcraft-cli-${{ env.VERSION }}-${{ matrix.asset }}"
-          New-Item -ItemType Directory -Force -Path "$P/examples" | Out-Null
-          Copy-Item target/release/filmcraft-cli.exe "$P/"
-          Copy-Item agent/fcedit.py "$P/fcedit.py"
-          '@echo off`r`npython "%~dp0fcedit.py" %*' | Set-Content "$P/fcedit.cmd" -Encoding ASCII
-          '@echo off`r`npython "%~dp0fcedit.py" serve %*' | Set-Content "$P/fcserve.cmd" -Encoding ASCII
-          Copy-Item agent/SKILL.md, agent/mcp.json "$P/" -ErrorAction SilentlyContinue
-          Copy-Item agent/examples/* "$P/examples/" -ErrorAction SilentlyContinue
-          Copy-Item LICENSE-MIT, LICENSE-APACHE, NOTICE "$P/" -ErrorAction SilentlyContinue
-          Compress-Archive -Path "$P" -DestinationPath "filmcraft-cli-${{ env.VERSION }}-${{ matrix.asset }}.${{ matrix.ext }}" -Force
-          (Get-FileHash "filmcraft-cli-${{ env.VERSION }}-${{ matrix.asset }}.${{ matrix.ext }}" -Algorithm SHA256).Hash |
-            Set-Content "filmcraft-cli-${{ env.VERSION }}-${{ matrix.asset }}.${{ matrix.ext }}.sha256" -Encoding ASCII
+          foreach ($app in @('film', 'effect', 'sound')) {
+            $cli = "${app}craft-cli"
+            $package = "${cli}-${{ env.VERSION }}-${{ matrix.asset }}"
+            $folder = "pkg/$package"
+            New-Item -ItemType Directory -Force -Path "$folder/examples" | Out-Null
+            Copy-Item "target/release/$cli.exe" "$folder/"
+            Copy-Item agent/fcedit.py "$folder/fcedit.py"
+            Copy-Item agent/SKILL.md, agent/mcp.json "$folder/"
+            Copy-Item agent/examples/*.json "$folder/examples/"
+            @('@echo off', 'python "%~dp0fcedit.py" --app effect %*') |
+              Set-Content "$folder/ecedit.cmd" -Encoding ASCII
+            @('@echo off', 'python "%~dp0fcedit.py" --app sound %*') |
+              Set-Content "$folder/scedit.cmd" -Encoding ASCII
+            @('@echo off', 'python "%~dp0fcedit.py" serve %*') |
+              Set-Content "$folder/fcserve.cmd" -Encoding ASCII
+            $archive = "$package.${{ matrix.ext }}"
+            Compress-Archive -Path "$folder" -DestinationPath $archive -Force
+            (Get-FileHash $archive -Algorithm SHA256).Hash |
+              Set-Content "$archive.sha256" -Encoding ASCII
+          }
 
-      - name: Smoke test — generated media through a real recipe (unix)
+      - name: Smoke test FilmCraft (Unix)
         if: runner.os != 'Windows'
+        shell: bash
         run: |
-          set -e
-          CLI="$(pwd)/target/release/filmcraft-cli"
-          cat > ci-recipe.json <<'EOF'
-          {"sequence": {"name": "ci", "width": 320, "height": 180, "fps": 30},
-           "timeline": [
-             {"op": "bars", "at": 0, "dur": 1, "name": "b"},
-             {"op": "matte", "color": "#202040", "at": 1, "dur": 1, "name": "m"},
-             {"op": "text", "content": "CI", "at": 0.2, "dur": 0.5, "position": [160, 150], "size": 40},
-             {"op": "transition", "clip": "b", "effect": "cross_dissolve", "frames": 10, "edge": "out"}
-           ],
-           "export": {"path": "ci-smoke.mp4", "format": "h264"}}
+          set -euo pipefail
+          export FILMCRAFT_CLI="$(pwd)/target/release/filmcraft-cli"
+          cat > ci-film.json <<'EOF'
+          {"sequence":{"name":"ci","width":320,"height":180,"fps":30},
+           "timeline":[{"op":"bars","at":0,"dur":1},{"op":"text","content":"CI","at":0.2,"dur":0.5,"position":[160,90],"size":40}],
+           "export":{"path":"ci-film.mp4","format":"h264"}}
           EOF
-          FILMCRAFT_CLI="$CLI" python3 agent/fcedit.py build ci-recipe.json --verbose
-          test -s ci-smoke.mp4
-          "$CLI" probe ci-smoke.mp4 | grep -qi h264
-          echo "smoke test passed"
+          python3 agent/fcedit.py build ci-film.json
+          test -s ci-film.mp4
+          "$FILMCRAFT_CLI" probe ci-film.mp4 > ci-film-probe.txt
+          test -s ci-film-probe.txt
 
-      - name: Smoke test — generated media through a real recipe (windows)
+      - name: Smoke test FilmCraft (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $env:FILMCRAFT_CLI = "$(Get-Location)\target\release\filmcraft-cli.exe"
-          @'
-          {"sequence": {"name": "ci", "width": 320, "height": 180, "fps": 30},
-           "timeline": [
-             {"op": "bars", "at": 0, "dur": 1, "name": "b"},
-             {"op": "matte", "color": "#202040", "at": 1, "dur": 1, "name": "m"},
-             {"op": "text", "content": "CI", "at": 0.2, "dur": 0.5, "position": [160, 150], "size": 40},
-             {"op": "transition", "clip": "b", "effect": "cross_dissolve", "frames": 10, "edge": "out"}
-           ],
-           "export": {"path": "ci-smoke.mp4", "format": "h264"}}
-          '@ | Set-Content ci-recipe.json -Encoding ASCII
-          python agent/fcedit.py build ci-recipe.json --verbose
-          if (-not (Test-Path ci-smoke.mp4)) { throw "no output" }
-          & $env:FILMCRAFT_CLI probe ci-smoke.mp4 | Select-String -Pattern h264 -Quiet | Out-Null
-          if (-not $?) { throw "probe failed" }
-          Write-Host "smoke test passed"
+          '{"sequence":{"name":"ci","width":320,"height":180,"fps":30},"timeline":[{"op":"bars","at":0,"dur":1}],"export":{"path":"ci-film.mp4","format":"h264"}}' |
+            Set-Content ci-film.json -Encoding ASCII
+          python agent/fcedit.py build ci-film.json
+          if (-not (Test-Path ci-film.mp4)) { throw 'FilmCraft smoke output missing' }
+          & $env:FILMCRAFT_CLI probe ci-film.mp4 | Out-Null
+          if (-not $?) { throw 'FilmCraft probe failed' }
+
+      - name: Smoke test EffectCraft
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            export EFFECTCRAFT_CLI="$(pwd)/target/release/effectcraft-cli.exe"
+          else
+            export EFFECTCRAFT_CLI="$(pwd)/target/release/effectcraft-cli"
+          fi
+          cat > ci-effect.json <<'EOF'
+          {"app":"effect","comp":{"name":"CI","width":320,"height":180,"fps":24,"duration":1,"background":"#101018"},
+           "layers":[{"type":"text","name":"title","text":"CI","size":48,"fill":"#ffffff","transform":{"position":[160,90]}}],
+           "preview":[{"time":0.2,"path":"ci-effect.png"}],
+           "render":{"path":"ci-effect.mp4","format":"h264"}}
+          EOF
+          python agent/fcedit.py --app effect build ci-effect.json
+          test -s ci-effect.png
+          test -s ci-effect.mp4
+
+      - name: Smoke test SoundCraft
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            export SOUNDCRAFT_CLI="$(pwd)/target/release/soundcraft-cli.exe"
+          else
+            export SOUNDCRAFT_CLI="$(pwd)/target/release/soundcraft-cli"
+          fi
+          cat > ci-sound.json <<'EOF'
+          {"app":"sound","session":{"name":"CI","sample_rate":48000,"template":"blank"},
+           "bounce":{"path":"ci-sound.wav","format":"wav","bit_depth":"24","start":0,"end":1}}
+          EOF
+          python agent/fcedit.py --app sound build ci-sound.json
+          test -s ci-sound.wav
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.VERSION }}
-          name: FilmCraft for Agents ${{ env.VERSION }}
+          name: Multi-Craft for Agents ${{ env.VERSION }}
           generate_release_notes: true
           files: |
-            filmcraft-cli-${{ env.VERSION }}-${{ matrix.asset }}.${{ matrix.ext }}
-            filmcraft-cli-${{ env.VERSION }}-${{ matrix.asset }}.${{ matrix.ext }}.sha256
+            *craft-cli-${{ env.VERSION }}-${{ matrix.asset }}.${{ matrix.ext }}
+            *craft-cli-${{ env.VERSION }}-${{ matrix.asset }}.${{ matrix.ext }}.sha256
