@@ -37,6 +37,34 @@ def ticks(seconds):
     return int(round(float(seconds) * TICKS))
 
 
+_OUTPUT_PATH_FIELDS = {
+    "file.exportMedia": ("path",),
+    "file.exportFrame": ("path",),
+    "file.saveAs": ("path",),
+    "project.save": ("path",),
+    "renderQueue.add": ("output", "path"),
+    "renderQueue.setOutput": ("output", "path"),
+    "save_project": ("path",),
+    "save_session": ("path",),
+    "bounce_mix": ("path",),
+    "render_frame": ("path",),
+}
+
+
+def _absolute_output_path(path):
+    if isinstance(path, str) and path and not ("{{" in path and "}}" in path):
+        return os.path.abspath(path)
+    return path
+
+
+def _normalize_output_args(command, args):
+    normalized = dict(args or {})
+    for field in _OUTPUT_PATH_FIELDS.get(command, ()):
+        if field in normalized:
+            normalized[field] = _absolute_output_path(normalized[field])
+    return normalized
+
+
 class FcError(Exception):
     pass
 
@@ -382,8 +410,9 @@ class RecipeBuilder:
             except FcError as e:
                 raise RecipeError(f"timeline[{i}] {op.get('op', '?')}: {e}")
         if project.get("save"):
-            self.s.run("file.saveAs", {"path": project["save"]})
-            self.log(f"saved {project['save']}")
+            save_path = _absolute_output_path(project["save"])
+            self.s.run("file.saveAs", {"path": save_path})
+            self.log(f"saved {save_path}")
         return self._export(r.get("export") or {})
 
     def _import_media(self, media):
@@ -673,7 +702,7 @@ class RecipeBuilder:
         if kind == "preview":
             params = {"target": "program", "time": ticks(op.get("at", 0))}
             if op.get("path"):
-                params["path"] = op["path"]
+                params["path"] = _absolute_output_path(op["path"])
             return self.s.run("file.exportFrame", params)
 
         if kind == "transcribe":
@@ -692,21 +721,23 @@ class RecipeBuilder:
             return self.s.run("sequence.addTracks", params)
 
         if kind == "raw":
-            return self.s.run(_need(op, "id"), op.get("params") or {})
+            command = _need(op, "id")
+            return self.s.run(command, _normalize_output_args(command, op.get("params") or {}))
 
         if kind == "tool":
-            return self.s.tool(_need(op, "name"), op.get("arguments") or {})
+            name = _need(op, "name")
+            return self.s.tool(name, _normalize_output_args(name, op.get("arguments") or {}))
 
         raise RecipeError(f"unknown op `{kind}` (place|audio|image|matte|bars|text|shape|"
                           "transition|effect|param|speed|gain|trim|move|razor|caption|"
                           "importCaptions|marker|preview|transcribe|addTracks|raw|tool)")
 
     def _export(self, spec):
-        path = spec.get("path")
+        path = _absolute_output_path(spec.get("path"))
         if not path:
             self.log("no export block — project only")
             return {"exported": None}
-        params = {"path": path, "wait": True}
+        params = _normalize_output_args("file.exportMedia", {"path": path, "wait": True})
         for k in ("preset", "format", "audioCodec", "flacLevel", "width", "height", "fps",
                   "bitrateKbps", "bitrateMode", "crf", "hardwareEncoding", "scale", "audio",
                   "quality", "burnCaptions", "alpha", "exrCompression", "captionSidecar",
@@ -750,17 +781,18 @@ class EffectRecipeBuilder:
         return ref
 
     def _call(self, name, arguments):
-        return self.s.tool(name, arguments)
+        return self.s.tool(name, _normalize_output_args(name, arguments))
 
     def _run(self, command, params):
-        return self.s.run(command, params)
+        return self.s.run(command, _normalize_output_args(command, params))
 
     def _image(self, args, path):
         result = self._call("render_preview", args)
-        paths = [path] if isinstance(path, str) else list(path or [])
+        paths = ([_absolute_output_path(path)] if isinstance(path, str) else
+                 [_absolute_output_path(item) for item in path or []])
         for item in paths:
             os.makedirs(os.path.dirname(os.path.abspath(item)), exist_ok=True)
-        written = _write_images(result, path)
+        written = _write_images(result, paths)
         if not written:
             raise RecipeError("render_preview returned no PNG image")
         return {"path": written[0]}
@@ -868,12 +900,14 @@ class EffectRecipeBuilder:
             if comp_id is not None:
                 args["comp"] = comp_id
             previews.append(self._image(args, preview["path"]))
+        saved = _absolute_output_path(self.r.get("save"))
         if self.r.get("save"):
-            self._call("save_project", {"path": self.r["save"]})
+            self._call("save_project", {"path": saved})
         render = self.r.get("render") or {}
         rendered = None
         if render.get("path"):
-            params = {"comp": comp_id, "output": render["path"]}
+            render_path = _absolute_output_path(render["path"])
+            params = {"comp": comp_id, "output": render_path}
             if render.get("format"):
                 params["format"] = render["format"]
             for key in ("start", "end"):
@@ -884,13 +918,13 @@ class EffectRecipeBuilder:
             self._run("renderQueue.add", params)
             self._run("renderQueue.render", {"wait": True})
             deadline = time.monotonic() + 600
-            while not os.path.exists(render["path"]) and time.monotonic() < deadline:
+            while not os.path.exists(render_path) and time.monotonic() < deadline:
                 time.sleep(0.2)
-            if not os.path.exists(render["path"]):
-                raise RecipeError(f"render did not create {render['path']}")
-            rendered = render["path"]
+            if not os.path.exists(render_path):
+                raise RecipeError(f"render did not create {render_path}")
+            rendered = render_path
         return {"comp": comp_id, "layers": self.layers, "previews": previews,
-                "rendered": rendered, "saved": self.r.get("save")}
+                "rendered": rendered, "saved": saved}
 
 
 class SoundRecipeBuilder:
@@ -905,10 +939,10 @@ class SoundRecipeBuilder:
         return {"seconds": float(seconds)}
 
     def _call(self, name, arguments=None):
-        return self.s.tool(name, arguments or {})
+        return self.s.tool(name, _normalize_output_args(name, arguments))
 
     def _run(self, command, params=None):
-        return self.s.run(command, params or {})
+        return self.s.run(command, _normalize_output_args(command, params))
 
     def build(self):
         session = self.r.get("session") or {}
@@ -949,19 +983,22 @@ class SoundRecipeBuilder:
                 self._call(op["name"], op.get("arguments") or {})
             else:
                 raise RecipeError(f"unknown sound op {op.get('op')!r} (raw|tool)")
+        saved = _absolute_output_path(self.r.get("save"))
         if self.r.get("save"):
-            self._call("save_session", {"path": self.r["save"]})
+            self._call("save_session", {"path": saved})
         bounce = self.r.get("bounce") or {}
         bounced = None
-        if bounce.get("path"):
+        bounce_path = _absolute_output_path(bounce.get("path"))
+        if bounce_path:
             args = {k: bounce[k] for k in ("path", "format", "bit_depth", "normalize")
                     if k in bounce}
+            args["path"] = bounce_path
             for key in ("start", "end"):
                 if key in bounce:
                     args[key] = self._time(bounce[key])
             bounced = self._call("bounce_mix", args)
-        return {"tracks": self.tracks, "saved": self.r.get("save"),
-                "bounce": bounced, "bounce_path": bounce.get("path")}
+        return {"tracks": self.tracks, "saved": saved,
+                "bounce": bounced, "bounce_path": bounce_path}
 
 
 def _replace_paths(value, outputs):
@@ -989,9 +1026,9 @@ def build_recipe(recipe, session_factory, log=None, close_session=True):
             spec.setdefault("app", "film")
             result = build_recipe(spec, session_factory, log=log, close_session=close_session)
             results.append({"id": step_id, "app": spec["app"], "result": result})
-            output = (spec.get("render") or {}).get("path") if spec["app"] == "effect" else (
-                (spec.get("bounce") or {}).get("path") if spec["app"] == "sound" else
-                (spec.get("export") or {}).get("path"))
+            output = (result.get("rendered") if spec["app"] == "effect" else
+                      result.get("bounce_path") if spec["app"] == "sound" else
+                      result.get("exported"))
             if output:
                 outputs[step_id] = output
         return {"steps": results}
