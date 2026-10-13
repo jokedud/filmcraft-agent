@@ -17,8 +17,8 @@
 <h2 align="center">🤖 FilmCraft for Agents</h2>
 
 <p align="center">
-  <b>This fork wraps the headless engine so AI agents can edit video on Linux, Windows and macOS —
-  one JSON recipe in, a rendered file out.</b>
+  <b>This fork combines FilmCraft, EffectCraft and SoundCraft into one headless
+  toolbox for AI agents on Linux, Windows and macOS.</b>
 </p>
 
 ```sh
@@ -31,12 +31,15 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/jok
 
 ```sh
 fcedit build recipe.json        # declarative recipe -> exported video
-fcedit serve --port 8321        # persistent session over HTTP (POST /recipe, /run, /frame)
+fcedit serve --apps film,effect,sound --port 8321
 filmcraft-cli mcp               # MCP server on stdio for Claude Code / Devin / any MCP client
 ```
 
-- 📦 **Per-OS binaries** on [Releases](https://github.com/jokedud/filmcraft-agent/releases): `filmcraft-cli` for linux-x86_64/aarch64, macos x86_64/arm64, windows-x64/arm64 — built by `agent-release.yml`.
-- 🧾 **Recipe format + SKILL.md** in [`agent/`](agent/) — give [`agent/SKILL.md`](agent/SKILL.md) to an agent and it knows the whole workflow.
+- **Three engines:** `filmcraft-cli` for video editing, `effectcraft-cli` for VFX/motion graphics, and `soundcraft-cli` for audio DAW workflows.
+- **One toolbox:** `fcedit` supports recipes, raw engine calls, MCP tool passthrough, a multi-app HTTP service and cross-engine pipelines. `ecedit` and `scedit` are app shortcuts.
+- **Installers and recipes:** install all three by default (`FC_APPS` selects a subset); schemas and examples are in [`agent/`](agent/) and [`agent/SKILL.md`](agent/SKILL.md).
+- **Per-OS binaries** on [Releases](https://github.com/jokedud/filmcraft-agent/releases), built by `agent-release.yml`.
+- **Docker:** set `FCEDIT_TOKEN` when running the container; non-loopback unauthenticated serving is refused by default.
 - 🌐 **Docs site**: https://jokedud.github.io/filmcraft-agent/
 - 🐳 **Docker**: `docker build -f agent/Dockerfile -t fcedit .` → `POST :8321/recipe`.
 

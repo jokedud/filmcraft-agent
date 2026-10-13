@@ -1,48 +1,74 @@
-# Install filmcraft-cli + fcedit on Windows.
-#
-#   powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/jokedud/filmcraft-agent/main/agent/install.ps1 | iex"
-#
-# Downloads the latest release binary for this machine (this repo's slim
-# filmcraft-cli package first, upstream storytold/filmcraft as a fallback),
-# installs fcedit, and adds the folder to the user PATH.
+param(
+    [string]$Apps = $(if ($env:FC_APPS) { $env:FC_APPS } else { 'film,effect,sound' })
+)
 
 $ErrorActionPreference = 'Stop'
-$Repo = $env:FC_REPO ?? 'jokedud/filmcraft-agent'
-$Upstream = 'storytold/filmcraft'
-$Dest = $env:FC_DEST ?? "$env:LOCALAPPDATA\filmcraft-agent\bin"
-
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$Repo = if ($env:FC_REPO) { $env:FC_REPO } else { 'jokedud/filmcraft-agent' }
+$Dest = if ($env:FC_DEST) { $env:FC_DEST } else { "$env:LOCALAPPDATA\filmcraft-agent\bin" }
 $arch = if ($env:PROCESSOR_ARCHITEW6432 -eq 'ARM64' -or $env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
 
 function Latest-Release($name) {
-    Invoke-RestMethod -Uri "https://api.github.com/repos/$name/releases/latest" -Headers @{ 'User-Agent' = 'fcedit-install' }
+    Invoke-RestMethod -Uri "https://api.github.com/repos/$name/releases/latest" `
+        -Headers @{ 'User-Agent' = 'fcedit-install' }
 }
 
-$asset = $null
-$version = $null
-try {
-    $rel = Latest-Release $Repo
-    $version = $rel.tag_name
-    $asset = ($rel.assets | Where-Object { $_.name -match "filmcraft-cli-.*-windows-$arch\.zip" -and $_.name -notmatch 'sha256' } | Select-Object -First 1).browser_download_url
-} catch { }
-
-if (-not $asset) {
-    $rel = Latest-Release $Upstream
-    $version = $version ?? $rel.tag_name
-    $asset = ($rel.assets | Where-Object { $_.name -match "filmcraft-.*-windows-$arch-portable\.zip" } | Select-Object -First 1).browser_download_url
+function Copy-ZipCli($url, $cli, $destination) {
+    $zipPath = Join-Path $tmp "$cli.zip"
+    Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
+    try {
+        $entry = $archive.Entries | Where-Object { $_.Name -eq "$cli.exe" } | Select-Object -First 1
+        if (-not $entry) { throw "$cli.exe not found in package" }
+        $source = $entry.Open()
+        try {
+            $target = [System.IO.File]::Create($destination)
+            try { $source.CopyTo($target) } finally { $target.Dispose() }
+        } finally {
+            $source.Dispose()
+        }
+    } finally {
+        $archive.Dispose()
+    }
 }
-if (-not $asset) { throw "fcedit: no release asset for windows-$arch" }
 
-Write-Host "fcedit: installing filmcraft $version for windows-$arch"
+$appsToInstall = $Apps.Split(',') | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ }
+if (-not $appsToInstall) { throw 'fcedit: -Apps must include film, effect, or sound' }
+$upstreams = @{
+    film = 'storytold/filmcraft'
+    effect = 'storytold/effectcraft'
+    sound = 'storytold/soundcraft'
+}
+foreach ($app in $appsToInstall) {
+    if (-not $upstreams.ContainsKey($app)) { throw "fcedit: unknown app '$app' in -Apps" }
+}
+
 New-Item -ItemType Directory -Force -Path $Dest | Out-Null
 $tmp = Join-Path $env:TEMP ("fcedit-" + [guid]::NewGuid())
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 try {
-    $zip = Join-Path $tmp 'pkg.zip'
-    Invoke-WebRequest -Uri $asset -OutFile $zip -UseBasicParsing
-    Expand-Archive -Path $zip -DestinationPath $tmp -Force
-    $cli = Get-ChildItem -Path $tmp -Recurse -Filter 'filmcraft-cli.exe' | Select-Object -First 1
-    if (-not $cli) { throw 'filmcraft-cli.exe not found in package' }
-    Copy-Item $cli.FullName (Join-Path $Dest 'filmcraft-cli.exe') -Force
+    foreach ($app in $appsToInstall) {
+        $cli = "${app}craft-cli"
+        $asset = $null
+        try {
+            $release = Latest-Release $Repo
+            $asset = ($release.assets | Where-Object {
+                $_.name -match "^$cli-.*-windows-$arch\.zip$" -and $_.name -notmatch 'sha256'
+            } | Select-Object -First 1).browser_download_url
+        } catch { }
+
+        if (-not $asset) {
+            $release = Latest-Release $upstreams[$app]
+            $engine = "${app}craft"
+            $asset = ($release.assets | Where-Object {
+                $_.name -match "^($engine|$cli)-.*-windows-$arch(-portable)?\.zip$"
+            } | Select-Object -First 1).browser_download_url
+        }
+        if (-not $asset) { throw "fcedit: no release asset for $app windows-$arch" }
+
+        Write-Host "fcedit: installing $app from $(Split-Path $asset -Leaf)"
+        Copy-ZipCli $asset $cli (Join-Path $Dest "$cli.exe")
+    }
 
     Invoke-WebRequest -Uri "https://raw.githubusercontent.com/$Repo/main/agent/fcedit.py" `
         -OutFile (Join-Path $Dest 'fcedit.py') -UseBasicParsing
@@ -54,6 +80,14 @@ python "%~dp0fcedit.py" %*
 @echo off
 python "%~dp0fcedit.py" serve %*
 '@ | Set-Content -Path (Join-Path $Dest 'fcserve.cmd') -Encoding ASCII
+    @'
+@echo off
+python "%~dp0fcedit.py" --app effect %*
+'@ | Set-Content -Path (Join-Path $Dest 'ecedit.cmd') -Encoding ASCII
+    @'
+@echo off
+python "%~dp0fcedit.py" --app sound %*
+'@ | Set-Content -Path (Join-Path $Dest 'scedit.cmd') -Encoding ASCII
 
     $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
     if ($userPath -notlike "*$Dest*") {
@@ -61,9 +95,7 @@ python "%~dp0fcedit.py" serve %*
         $env:Path = "$env:Path;$Dest"
         Write-Host "added $Dest to user PATH"
     }
-
-    & (Join-Path $Dest 'filmcraft-cli.exe') --version
-    Write-Host "fcedit: done. Open a new shell and try: fcedit commands"
+    Write-Host "fcedit: installed $($appsToInstall -join ', '). Try: fcedit --app effect tools"
 } finally {
     Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 }

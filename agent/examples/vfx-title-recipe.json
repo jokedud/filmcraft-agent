@@ -1,0 +1,62 @@
+{
+  "app": "effect",
+  "comp": {
+    "name": "Agent Title",
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "duration": 5,
+    "background": "#101018"
+  },
+  "layers": [
+    {
+      "type": "solid",
+      "name": "background",
+      "solid": "#101018",
+      "out": 5
+    },
+    {
+      "type": "text",
+      "name": "title",
+      "text": "A NEW STORY",
+      "size": 120,
+      "fill": "#ffffff",
+      "transform": {
+        "position": [960, 540],
+        "opacity": 100
+      },
+      "keys": {
+        "transform/position": [
+          {"time": 0, "value": [960, 620]},
+          {"time": 1, "value": [960, 540]}
+        ],
+        "transform/opacity": [
+          {"time": 0, "value": 0},
+          {"time": 1, "value": 100}
+        ]
+      },
+      "ease": "easyEase",
+      "expressions": {
+        "transform/rotation": "time*2"
+      },
+      "effects": [
+        {
+          "effect": "Gaussian Blur",
+          "values": {"blurriness": 4}
+        }
+      ],
+      "out": 5
+    }
+  ],
+  "preview": [
+    {"time": 1, "path": "/ABSOLUTE/PATH/TO/title-1.png"},
+    {"time": 3, "path": "/ABSOLUTE/PATH/TO/title-3.png"}
+  ],
+  "save": "/ABSOLUTE/PATH/TO/title.ecproj",
+  "render": {
+    "path": "/ABSOLUTE/PATH/TO/title.mp4",
+    "format": "h264",
+    "start": 0,
+    "end": 5
+  }
+}

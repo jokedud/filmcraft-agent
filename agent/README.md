@@ -1,36 +1,97 @@
-# agent/ — FilmCraft for AI agents
+# Multi-Craft for AI agents
 
-Everything an AI agent (or a script, or a CI job) needs to edit video on
-Linux, Windows, or macOS — no window, no ffmpeg, no GPU required.
+One stdlib-only Python agent layer drives three storytold engines headlessly on
+Linux, Windows, and macOS:
 
-| File | What it is |
-|---|---|
-| `install.sh` | One-line installer (Linux/macOS): `filmcraft-cli` + `fcedit` on PATH |
-| `install.ps1` | One-line installer (Windows PowerShell) |
-| `fcedit.py` | The agent tool: recipe builder + HTTP service + helpers (stdlib only) |
-| `SKILL.md` | Drop-in skill file — give this to an agent and it knows the whole workflow |
-| `mcp.json` | MCP client config snippet for `filmcraft-cli mcp` |
-| `Dockerfile` | Container image serving `POST /recipe` on :8321 |
-| `examples/` | Recipes and a raw JSONL command script to copy |
+| App | CLI | Recipe type | Shortcut |
+|---|---|---|---|
+| FilmCraft | `filmcraft-cli` | video edits, titles, captions, export | `fcedit` |
+| EffectCraft | `effectcraft-cli` | compositions, layers, animation, effects, render | `ecedit` |
+| SoundCraft | `soundcraft-cli` | sessions, tracks, mix, automation, bounce | `scedit` |
 
-## Quick start
+`fcedit` also provides full MCP tool passthrough, a persistent multi-app HTTP
+service, and ordered pipelines that pass one engine's output into another.
+
+## Install
+
+Install all engines by default:
 
 ```sh
-# 1. install (Linux/macOS)
+# Linux / macOS
 curl -fsSL https://raw.githubusercontent.com/jokedud/filmcraft-agent/main/agent/install.sh | sh
 
-# 2. edit the example
-fcedit build agent/examples/montage-recipe.json --verbose
-# → montage.mp4
+# Windows PowerShell
+irm https://raw.githubusercontent.com/jokedud/filmcraft-agent/main/agent/install.ps1 | iex
 ```
 
-## The moving parts
+Select a subset with `FC_APPS=film,effect,sound` (comma-separated; default is
+all three), or on Windows use `-Apps film,effect,sound`. The installers fetch
+this distribution's release assets first, then fall back to the corresponding
+upstream release. `fcedit.py` requires Python 3 and no third-party modules.
 
-- **`filmcraft-cli`** — the headless engine. `exec`/`run`/`mcp`/`export`/
-  `probe`/`render`/`commands`. Every engine command is one JSON call.
-- **`fcedit`** — Python wrapper. `build` compiles a declarative recipe to live
-  commands over a persistent MCP session (named clips, `.audio` refs, `#index`,
-  auto-append). `serve` exposes the session over HTTP for remote agents.
+## Build recipes
 
-See [SKILL.md](SKILL.md) for the full recipe schema and command cookbook, or
-the site: https://jokedud.github.io/filmcraft-agent/
+```sh
+fcedit build agent/examples/montage-recipe.json
+ecedit build agent/examples/vfx-title-recipe.json
+scedit build agent/examples/audio-mix-recipe.json
+fcedit build agent/examples/pipeline-recipe.json
+```
+
+Set `"app":"film"|"effect"|"sound"` at the top of a recipe; omitted `app`
+defaults to FilmCraft. Each recipe accepts `ops` with `raw` engine commands and
+`tool` MCP calls. `pipeline` recipes run ordered app recipes and replace
+`{{step-id}}` paths in later inputs with earlier render, bounce, or export
+outputs.
+
+The effect recipe supports comps, media import, solid/text/shape/null/
+adjustment/camera/light/footage layers, timing, transforms, keyframes,
+expressions, effects, masks, JSX-style scripts, previews, project save and
+blocking render. The sound recipe supports session setup, tracks, audio import,
+gain, pan, mute/solo, inserts, automation, markers, session save and bounce
+(including peak and loudness results). For unsupported specialized operations,
+call any MCP tool directly:
+
+```sh
+fcedit --app effect tools
+fcedit --app effect tool list_effects '{"filter":"blur"}'
+fcedit --app sound describe mix.insert
+fcedit --app film tool command_run '{"id":"timeline.place","params":{}}'
+```
+
+## HTTP service and security
+
+```sh
+fcedit serve --apps film,effect,sound --port 8321
+curl http://127.0.0.1:8321/health
+curl http://127.0.0.1:8321/effect/tools
+```
+
+App-prefixed routes include `/run`, `/exec`, `/batch`, `/inspect`, `/commands`,
+`/frame`, `/recipe`, `/tools`, `/tool`, and `/describe`; unprefixed routes alias
+the selected default app. `POST /pipeline` accepts a pipeline recipe. Sessions
+start lazily, so an unavailable CLI affects only its own app routes.
+
+Only loopback listeners are allowed without authentication. For a non-loopback
+listener, set `FCEDIT_TOKEN` or pass `--token`; requests other than `GET
+/health` must send `Authorization: Bearer <token>`. Browser origins are denied
+by default; add specific trusted origins with repeatable `--cors ORIGIN` or
+`FCEDIT_CORS`. Do not expose an unauthenticated service to an untrusted network.
+
+For Docker, supply a token because the container listens on `0.0.0.0`:
+
+```sh
+docker build -f agent/Dockerfile -t fcedit .
+docker run -p 8321:8321 -e FCEDIT_TOKEN=replace-me -v "$PWD/media:/media" fcedit
+```
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `fcedit.py` | MCP sessions, engine adapters, recipes, pipeline, HTTP server |
+| `install.sh`, `install.ps1` | Cross-platform multi-engine installers |
+| `mcp.json` | MCP config for FilmCraft, EffectCraft, SoundCraft |
+| `SKILL.md` | Detailed recipe schemas, workflow and tool reference |
+| `Dockerfile` | Multi-engine image serving the authenticated HTTP API |
+| `examples/` | Film, VFX title, audio mix, pipeline and command examples |

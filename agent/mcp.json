@@ -4,14 +4,13 @@
       "command": "filmcraft-cli",
       "args": ["mcp"]
     },
-    "filmcraft-demo": {
-      "command": "filmcraft-cli",
-      "args": ["mcp", "--demo"]
+    "effectcraft": {
+      "command": "effectcraft-cli",
+      "args": ["mcp"]
     },
-    "filmcraft-bridge": {
-      "command": "filmcraft-cli",
-      "args": ["mcp", "--bridge", "127.0.0.1:9876"],
-      "comment": "drives the running desktop app started with: filmcraft --control 9876"
+    "soundcraft": {
+      "command": "soundcraft-cli",
+      "args": ["mcp"]
     }
   }
 }

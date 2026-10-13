@@ -71,8 +71,8 @@
 
 <section id="install"><div class="wrap">
   <h2><span class="n">01</span>Install</h2>
-  <p class="dim">One command puts <code>filmcraft-cli</code> (the engine) and <code>fcedit</code>
-  (the agent tool) on PATH. No ffmpeg, no GPU, no window needed.</p>
+  <p class="dim">One command puts all three headless engines and the <code>fcedit</code>
+  toolbox on PATH. Install all by default, or select a subset with <code>FC_APPS</code>.</p>
   <div class="tabs">
     <button class="active" data-t="linux">Linux / macOS</button>
     <button data-t="win">Windows</button>
@@ -83,7 +83,7 @@
     <pre id="t-linux"><code>curl -fsSL https://raw.githubusercontent.com/jokedud/filmcraft-agent/main/agent/install.sh | sh</code></pre>
     <pre id="t-win" class="hidden"><code>powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/jokedud/filmcraft-agent/main/agent/install.ps1 | iex"</code></pre>
     <pre id="t-docker" class="hidden"><code>docker build -f agent/Dockerfile -t fcedit .
-docker run -p 8321:8321 -v $PWD/media:/media fcedit
+docker run -p 8321:8321 -e FCEDIT_TOKEN=replace-me -v $PWD/media:/media fcedit
 <span class="c"># POST recipes to http://localhost:8321/recipe</span></code></pre>
     <pre id="t-src" class="hidden"><code>git clone https://github.com/jokedud/filmcraft-agent && cd filmcraft-agent
 cargo build --release -p filmcraft-cli
@@ -92,12 +92,49 @@ cargo build --release -p filmcraft-cli
   <div class="grid">
     <div class="card"><h3>fcedit build</h3><p class="dim">Declarative recipe → exported video. Named clips, auto-append timeline, transitions, effects, captions, keyframes.</p></div>
     <div class="card"><h3>fcedit serve</h3><p class="dim">A persistent editing session over HTTP — <code>POST /recipe</code>, <code>/run</code>, <code>/batch</code>, <code>/frame</code>, <code>GET /inspect</code>.</p></div>
-    <div class="card"><h3>filmcraft-cli mcp</h3><p class="dim">A full MCP server on stdio. Plug it into Claude Code, Devin, or any MCP client and the tools appear.</p></div>
+    <div class="card"><h3>Three MCP engines</h3><p class="dim"><code>filmcraft-cli</code>, <code>effectcraft-cli</code> and <code>soundcraft-cli</code> each expose their full tools over stdio.</p></div>
   </div>
 </div></section>
 
+<section id="engines"><div class="wrap">
+  <h2><span class="n">02</span>Three engines, one toolbox</h2>
+  <p class="dim">Choose an engine in the recipe's <code>app</code> field, or let a pipeline
+  create a title, mix audio, and assemble the final video. Recipes also accept raw
+  commands and direct MCP tool calls.</p>
+  <div class="grid">
+    <div class="card"><h3>FilmCraft</h3><p class="dim">Video edits, transitions, captions, effects, audio placement and export. Use <code>fcedit</code>.</p></div>
+    <div class="card"><h3>EffectCraft</h3><p class="dim">Compositions, text and shape layers, transforms, keyframes, expressions, masks, effects and rendered previews. Use <code>ecedit</code>.</p></div>
+    <div class="card"><h3>SoundCraft</h3><p class="dim">Audio sessions, tracks, inserts, automation, markers and measured mix bounces. Use <code>scedit</code>.</p></div>
+  </div>
+  <h3>VFX title recipe</h3>
+  <pre><code>{"app":"effect","comp":{"name":"Title","width":1920,"height":1080,"fps":30,"duration":5},
+ "layers":[{"type":"text","name":"title","text":"A NEW STORY","size":120,
+   "transform":{"position":[960,540],"opacity":100},
+   "keys":{"transform/opacity":[{"time":0,"value":0},{"time":1,"value":100}]},
+   "effects":[{"effect":"Glow","values":{}}]}],
+ "preview":[{"time":1,"path":"/ABSOLUTE/PATH/title.png"}],
+ "render":{"path":"/ABSOLUTE/PATH/title.mp4","format":"h264"}}</code></pre>
+  <h3>Audio mix recipe</h3>
+  <pre><code>{"app":"sound","session":{"name":"Mix","sample_rate":48000},
+ "tracks":[{"name":"music","src":"/ABSOLUTE/PATH/music.wav","gain":-6,"pan":0,
+   "inserts":[{"plugin":"eq_7band","params":{}}]}],
+ "bounce":{"path":"/ABSOLUTE/PATH/mix.wav","format":"wav","bit_depth":"24","start":0,"end":10}}</code></pre>
+  <h3>Cross-engine pipeline</h3>
+  <pre><code>{"app":"pipeline","steps":[
+ {"id":"title","app":"effect","comp":{"name":"Title","width":1920,"height":1080,"fps":30,"duration":5},
+  "layers":[{"type":"text","text":"TITLE","size":100}],
+  "render":{"path":"/ABSOLUTE/PATH/title.mp4","format":"h264"}},
+ {"id":"mix","app":"sound","session":{"name":"Mix","sample_rate":48000},
+  "tracks":[{"name":"music","src":"/ABSOLUTE/PATH/music.wav"}],
+  "bounce":{"path":"/ABSOLUTE/PATH/mix.wav","format":"wav","start":0,"end":5}},
+ {"id":"final","app":"film","media":{"title":"{{title}}","music":"{{mix}}","clip":"/ABSOLUTE/PATH/clip.mp4"},
+  "timeline":[{"op":"place","src":"title","at":0,"dur":5},
+   {"op":"place","src":"clip","at":0,"dur":5},{"op":"audio","src":"music","at":0,"dur":5}],
+  "export":{"path":"/ABSOLUTE/PATH/final.mp4","format":"h264"}}]}</code></pre>
+</div></section>
+
 <section id="recipe"><div class="wrap">
-  <h2><span class="n">02</span>The recipe format</h2>
+  <h2><span class="n">03</span>The recipe format</h2>
   <p class="dim">One JSON document describes media, timeline, styling and export. <code>fcedit build</code>
   compiles it to engine commands against a live session — clip ids resolve by name.</p>
   <pre><code>{
@@ -123,7 +160,7 @@ cargo build --release -p filmcraft-cli
 </div></section>
 
 <section id="ops"><div class="wrap">
-  <h2><span class="n">03</span>Recipe ops</h2>
+  <h2><span class="n">04</span>Recipe ops</h2>
   <table>
     <tr><th>op</th><th>what it does</th><th>engine command</th></tr>
     <tr><td><code>place</code></td><td>put media on the timeline (<code>in</code>/<code>out</code>/<code>dur</code>, <code>at</code> or auto-append, <code>track</code>, <code>audioTrack</code>, <code>name</code>)</td><td>timeline.place</td></tr>
@@ -147,7 +184,7 @@ cargo build --release -p filmcraft-cli
 </div></section>
 
 <section id="agent"><div class="wrap">
-  <h2><span class="n">04</span>Wire it to your agent</h2>
+  <h2><span class="n">05</span>Wire it to your agent</h2>
   <div class="grid">
     <div class="card">
       <h3>MCP (Claude Code, Devin…)</h3>
@@ -157,7 +194,10 @@ cargo build --release -p filmcraft-cli
     </div>
     <div class="card">
       <h3>HTTP (any device, any language)</h3>
-      <pre><code>fcedit serve --port 8321
+      <pre><code>fcedit serve --apps film,effect,sound --port 8321
+
+<span class="c"># non-loopback listeners require a token</span>
+fcedit serve --host 0.0.0.0 --token "$FCEDIT_TOKEN"
 
 curl -X POST localhost:8321/recipe \
   -H 'Content-Type: application/json' -d @recipe.json</code></pre>
@@ -178,7 +218,7 @@ filmcraft-cli export out.mp4 --project edit.fcproj --format h264</code></pre>
 </div></section>
 
 <section id="about"><div class="wrap">
-  <h2><span class="n">05</span>What you get</h2>
+  <h2><span class="n">06</span>What you get</h2>
   <ul>
     <li><b>The whole engine, headless.</b> 700+ commands: multi-track timeline, linked A/V clips, ripple/roll/slip/slide trims, transitions, effects, keyframes, captions (608/708/Subtitle/Teletext), markers, nested sequences, interchange (EDL/OTIO/FCP-XML/AAF).</li>
     <li><b>Real media in, real media out.</b> h264/HEVC/ProRes/DNxHR/APV/MJPEG encode, MXF Op-1a/Op-Atom, image sequences, WAV/AIFF/AAC/FLAC audio. Decode for the formats you'd feed an editor.</li>

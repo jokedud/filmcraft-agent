@@ -1,0 +1,70 @@
+{
+  "app": "pipeline",
+  "steps": [
+    {
+      "id": "title",
+      "app": "effect",
+      "comp": {
+        "name": "Pipeline Title",
+        "width": 1920,
+        "height": 1080,
+        "fps": 30,
+        "duration": 5
+      },
+      "layers": [
+        {
+          "type": "text",
+          "name": "title",
+          "text": "TITLE",
+          "size": 100,
+          "transform": {"position": [960, 540]}
+        }
+      ],
+      "render": {
+        "path": "/ABSOLUTE/PATH/TO/title.mp4",
+        "format": "h264"
+      }
+    },
+    {
+      "id": "mix",
+      "app": "sound",
+      "session": {
+        "name": "Pipeline Mix",
+        "sample_rate": 48000
+      },
+      "tracks": [
+        {
+          "name": "music",
+          "src": "/ABSOLUTE/PATH/TO/music.wav",
+          "gain": -6
+        }
+      ],
+      "bounce": {
+        "path": "/ABSOLUTE/PATH/TO/mix.wav",
+        "format": "wav",
+        "start": 0,
+        "end": 5
+      }
+    },
+    {
+      "id": "final",
+      "app": "film",
+      "sequence": {"width": 1920, "height": 1080, "fps": 30},
+      "media": {
+        "title": "{{title}}",
+        "clip": "/ABSOLUTE/PATH/TO/clip.mp4",
+        "music": "{{mix}}"
+      },
+      "timeline": [
+        {"op": "place", "src": "clip", "track": "V1", "at": 0, "dur": 5},
+        {"op": "place", "src": "title", "track": "V2", "at": 0, "dur": 5},
+        {"op": "audio", "src": "music", "track": "A1", "at": 0, "dur": 5}
+      ],
+      "export": {
+        "path": "/ABSOLUTE/PATH/TO/final.mp4",
+        "format": "h264",
+        "crf": 20
+      }
+    }
+  ]
+}
