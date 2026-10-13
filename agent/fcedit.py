@@ -816,7 +816,7 @@ class EffectRecipeBuilder:
                 self._run("layer.rename", {"layer": layer, "name": name})
             timing = {k: spec[k] for k in ("in", "out", "start") if k in spec}
             if timing:
-                self._run("layer.timing", dict({"layer": layer}, **timing))
+                self._run("layer.timing", dict({"layers": [layer]}, **timing))
             if "blend" in spec:
                 self._run("layer.setBlendMode", {"layers": [layer], "mode": spec["blend"]})
             if spec.get("parent"):
@@ -1060,8 +1060,6 @@ class Handler(BaseHTTPRequestHandler):
         sys.stderr.write("fcserve %s\n" % (fmt % a))
 
     def do_OPTIONS(self):
-        if not self._authorized():
-            return self._err(FcError("unauthorized"), 401)
         self.send_response(204)
         self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")

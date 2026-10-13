@@ -101,7 +101,7 @@ dl "https://raw.githubusercontent.com/$REPO/main/agent/fcedit.py" "$DEST/fcedit"
 chmod +x "$DEST/fcedit"
 printf '#!/bin/sh\nexec "%s/fcedit" serve "$@"\n' "$DEST" > "$DEST/fcserve"
 printf '#!/bin/sh\nexec "%s/fcedit" --app effect "$@"\n' "$DEST" > "$DEST/ecedit"
-printf '#!/bin/sh\nexec "%s/fcedit" --app sound "$@"\n' "$DEST/scedit"
+printf '#!/bin/sh\nexec "%s/fcedit" --app sound "$@"\n' "$DEST" > "$DEST/scedit"
 chmod +x "$DEST/fcserve" "$DEST/ecedit" "$DEST/scedit"
 
 echo "Installed apps: $APPS" >&2

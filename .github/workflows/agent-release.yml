@@ -139,9 +139,9 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$RUNNER_OS" = "Windows" ]; then
-            export EFFECTCRAFT_CLI="$(pwd)/target/release/effectcraft-cli.exe"
+            export EFFECTCRAFT_CLI="$(pwd -W 2>/dev/null || pwd)/target/release/effectcraft-cli.exe"
           else
-            export EFFECTCRAFT_CLI="$(pwd)/target/release/effectcraft-cli"
+            export EFFECTCRAFT_CLI="$(pwd -W 2>/dev/null || pwd)/target/release/effectcraft-cli"
           fi
           cat > ci-effect.json <<'EOF'
           {"app":"effect","comp":{"name":"CI","width":320,"height":180,"fps":24,"duration":1,"background":"#101018"},
@@ -158,9 +158,9 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$RUNNER_OS" = "Windows" ]; then
-            export SOUNDCRAFT_CLI="$(pwd)/target/release/soundcraft-cli.exe"
+            export SOUNDCRAFT_CLI="$(pwd -W 2>/dev/null || pwd)/target/release/soundcraft-cli.exe"
           else
-            export SOUNDCRAFT_CLI="$(pwd)/target/release/soundcraft-cli"
+            export SOUNDCRAFT_CLI="$(pwd -W 2>/dev/null || pwd)/target/release/soundcraft-cli"
           fi
           cat > ci-sound.json <<'EOF'
           {"app":"sound","session":{"name":"CI","sample_rate":48000,"template":"blank"},
