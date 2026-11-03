@@ -21,7 +21,7 @@
         }
       ],
       "render": {
-        "path": "/ABSOLUTE/PATH/TO/title.mp4",
+        "path": "title.mp4",
         "format": "h264"
       }
     },
@@ -40,7 +40,7 @@
         }
       ],
       "bounce": {
-        "path": "/ABSOLUTE/PATH/TO/mix.wav",
+        "path": "mix.wav",
         "format": "wav",
         "start": 0,
         "end": 5
@@ -61,7 +61,7 @@
         {"op": "audio", "src": "music", "track": "A1", "at": 0, "dur": 5}
       ],
       "export": {
-        "path": "/ABSOLUTE/PATH/TO/final.mp4",
+        "path": "final.mp4",
         "format": "h264",
         "crf": 20
       }

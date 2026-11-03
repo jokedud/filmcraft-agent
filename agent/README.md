@@ -32,11 +32,17 @@ upstream release. `fcedit.py` requires Python 3 and no third-party modules.
 ## Build recipes
 
 ```sh
-fcedit build agent/examples/montage-recipe.json
+# Runs as-is: renders title.mp4, title-1.png, title-3.png and title.ecproj
+# into the current directory.
 ecedit build agent/examples/vfx-title-recipe.json
+
+# Edit the input media paths (`/abs/path/...`, `/ABSOLUTE/PATH/TO/...`) first.
+fcedit build agent/examples/montage-recipe.json
 scedit build agent/examples/audio-mix-recipe.json
 fcedit build agent/examples/pipeline-recipe.json
 ```
+
+Relative output paths resolve against the current directory.
 
 Set `"app":"film"|"effect"|"sound"` at the top of a recipe; omitted `app`
 defaults to FilmCraft. Each recipe accepts `ops` with `raw` engine commands and

@@ -49,12 +49,12 @@
     }
   ],
   "preview": [
-    {"time": 1, "path": "/ABSOLUTE/PATH/TO/title-1.png"},
-    {"time": 3, "path": "/ABSOLUTE/PATH/TO/title-3.png"}
+    {"time": 1, "path": "title-1.png"},
+    {"time": 3, "path": "title-3.png"}
   ],
-  "save": "/ABSOLUTE/PATH/TO/title.ecproj",
+  "save": "title.ecproj",
   "render": {
-    "path": "/ABSOLUTE/PATH/TO/title.mp4",
+    "path": "title.mp4",
     "format": "h264",
     "start": 0,
     "end": 5
