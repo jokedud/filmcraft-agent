@@ -28,9 +28,9 @@
   "markers": [
     {"at": 4, "name": "drop"}
   ],
-  "save": "/ABSOLUTE/PATH/TO/mix.scraft",
+  "save": "mix.scraft",
   "bounce": {
-    "path": "/ABSOLUTE/PATH/TO/mix.wav",
+    "path": "mix.wav",
     "format": "wav",
     "bit_depth": "24",
     "normalize": true,
